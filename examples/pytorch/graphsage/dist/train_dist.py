@@ -1,6 +1,7 @@
 import argparse
 import socket
 import time
+import os
 from contextlib import contextmanager
 
 import numpy as np
@@ -11,6 +12,8 @@ import torch.optim as optim
 import tqdm
 import dgl
 import dgl.nn.pytorch as dglnn
+from numa import schedule, memory
+
 
 def load_subtensor(g, seeds, input_nodes, device, load_feat=True):
     """
@@ -146,6 +149,15 @@ def evaluate(model, g, inputs, labels, val_nid, test_nid, batch_size, device):
 
 
 def run(args, device, data):
+    if args.cpunodebind != -1:
+        schedule.run_on_nodes(args.cpunodebind)
+    if args.membind != -1:
+        memory.set_membind_nodes(args.membind)
+    if args.interleave != "":
+        if args.interleave == "all":
+            # assume two numa nodes
+            memory.set_interleave_nodes(0, 1)
+    print(f"current env: {os.environ}")
     # Unpack data
     train_nid, val_nid, test_nid, in_feats, n_classes, g = data
     shuffle = True
@@ -369,6 +381,9 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="GCN")
+    parser.add_argument("--cpunodebind", type=int, help="cpu node bind", default=-1)
+    parser.add_argument("--membind", type=int, help="memory node bind", default=-1)
+    parser.add_argument("--interleave", type=str, help="memory interleaving", default="")
     parser.add_argument("--graph_name", type=str, help="graph name")
     parser.add_argument("--id", type=int, help="the partition id")
     parser.add_argument(
