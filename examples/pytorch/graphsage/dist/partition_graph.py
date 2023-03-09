@@ -55,7 +55,7 @@ if __name__ == "__main__":
     )
     args = argparser.parse_args()
 
-    start = time.time()
+    start = time.perf_counter()
     if args.dataset == "reddit":
         g, _ = load_reddit()
     elif args.dataset == "ogb-product":
@@ -63,7 +63,7 @@ if __name__ == "__main__":
     elif args.dataset == "ogb-paper100M":
         g, _ = load_ogb("ogbn-papers100M")
     print(
-        "load {} takes {:.3f} seconds".format(args.dataset, time.time() - start)
+        "load {} takes {:.3f} seconds".format(args.dataset, time.perf_counter() - start)
     )
     print("|V|={}, |E|={}".format(g.number_of_nodes(), g.number_of_edges()))
     print(
