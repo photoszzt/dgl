@@ -151,12 +151,15 @@ def evaluate(model, g, inputs, labels, val_nid, test_nid, batch_size, device):
 def run(args, device, data):
     if args.cpunodebind != -1:
         schedule.run_on_nodes(args.cpunodebind)
+        print(f"CPU node bind: {args.cpunodebind}")
     if args.membind != -1:
         memory.set_membind_nodes(args.membind)
+        print(f"mem node bind : {args.membind}")
     if args.interleave != "":
         if args.interleave == "all":
             # assume two numa nodes
             memory.set_interleave_nodes(0, 1)
+            print(f"interleave between 0 and 1")
     print(f"current env: {os.environ}")
     # Unpack data
     train_nid, val_nid, test_nid, in_feats, n_classes, g = data
