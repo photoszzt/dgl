@@ -64,6 +64,8 @@ const std::string& guessAddress() {
 }
 
 RPCStatus SendRPCMessage(const RPCMessage& msg, const int32_t target_id) {
+  std::size_t total_size = msg.GetRPCMsgSize();
+  fprintf(stderr, "SendRPCMsg: total_size=%lu b", total_size);
   RPCContext::getInstance()->sender->Send(msg, target_id);
   return kRPCSuccess;
 }
@@ -84,6 +86,8 @@ RPCStatus RecvRPCMessage(RPCMessage* msg, int32_t timeout) {
       DLOG(WARNING) << log_str;
     }
   } while (timeout == 0 && status == kRPCTimeOut);
+  std::size_t total_size = msg->GetRPCMsgSize();
+  fprintf(stderr, "RecvRPCMsg: total_size=%lu b", total_size);
   return status;
 }
 
