@@ -17,6 +17,8 @@
 
 #include <csignal>
 #include <future>
+#include <iostream>
+#include <chrono>
 
 #include "../c_api_common.h"
 #include "../runtime/resource_manager.h"
@@ -65,7 +67,8 @@ const std::string& guessAddress() {
 
 RPCStatus SendRPCMessage(const RPCMessage& msg, const int32_t target_id) {
   std::size_t total_size = msg.GetRPCMsgSize();
-  fprintf(stderr, "SendRPCMsg: total_size=%lu b", total_size);
+  auto ts = std::chrono::steady_clock::now().time_since_epoch();
+  std::cerr << "SendRPCMsg: total_size=" << total_size << " B, " << ts.count() << std::endl;
   RPCContext::getInstance()->sender->Send(msg, target_id);
   return kRPCSuccess;
 }
@@ -87,7 +90,8 @@ RPCStatus RecvRPCMessage(RPCMessage* msg, int32_t timeout) {
     }
   } while (timeout == 0 && status == kRPCTimeOut);
   std::size_t total_size = msg->GetRPCMsgSize();
-  fprintf(stderr, "RecvRPCMsg: total_size=%lu b", total_size);
+  auto ts = std::chrono::steady_clock::now().time_since_epoch();
+  std::cerr << "RecvRPCMsg: total_size=" << total_size << " B, " << ts.count() << std::endl;
   return status;
 }
 
