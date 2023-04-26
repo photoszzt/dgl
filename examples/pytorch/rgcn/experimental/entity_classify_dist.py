@@ -902,7 +902,7 @@ if __name__ == "__main__":
         help="Use layer norm",
     )
     parser.add_argument(
-        "--local_rank", type=int, help="get rank of the process"
+        "--local-rank", type=int, help="get rank of the process"
     )
     parser.add_argument(
         "--standalone", action="store_true", help="run in the standalone mode"
