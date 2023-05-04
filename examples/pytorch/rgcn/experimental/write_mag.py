@@ -91,7 +91,7 @@ def main():
         1,
     )
     np.savetxt(
-        "mag_removed_edges.txt", removed_edge_data.numpy(), fmt="%d", delimiter=" "
+        os.path.join(args.output, "mag_removed_edges.txt"), removed_edge_data.numpy(), fmt="%d", delimiter=" "
     )
     print(
         "There are {} edges, remove {} self-loops and {} duplicated edges".format(
