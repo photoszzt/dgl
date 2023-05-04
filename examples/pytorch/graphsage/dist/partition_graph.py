@@ -2,6 +2,7 @@ import argparse
 import os
 import sys
 import time
+from pathlib import Path
 
 import dgl
 
@@ -13,6 +14,12 @@ from load_graph import load_ogb, load_reddit
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser("Partition builtin graphs")
+    argparser.add_argument(
+        "--dataset_path",
+        type=str,
+        default=Path.home() / ".dgl",
+        help="path to the dataset",
+    )
     argparser.add_argument(
         "--dataset",
         type=str,
@@ -59,11 +66,13 @@ if __name__ == "__main__":
     if args.dataset == "reddit":
         g, _ = load_reddit()
     elif args.dataset == "ogb-product":
-        g, _ = load_ogb("ogbn-products")
+        g, _ = load_ogb("ogbn-products", root=args.dataset_path)
     elif args.dataset == "ogb-paper100M":
-        g, _ = load_ogb("ogbn-papers100M")
+        g, _ = load_ogb("ogbn-papers100M", root=args.dataset_path)
     print(
-        "load {} takes {:.3f} seconds".format(args.dataset, time.perf_counter() - start)
+        "load {} takes {:.3f} seconds".format(
+            args.dataset, time.perf_counter() - start
+        )
     )
     print("|V|={}, |E|={}".format(g.num_nodes(), g.num_edges()))
     print(
