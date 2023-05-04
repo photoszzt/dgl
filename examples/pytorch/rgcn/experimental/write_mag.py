@@ -12,6 +12,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=str, default="data")
     args = parser.parse_args()
+    os.makedirs(args.output, exist_ok=True)
     # Load OGB-MAG.
     dataset = DglNodePropPredDataset(name="ogbn-mag")
     hg_orig, labels = dataset[0]
