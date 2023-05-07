@@ -17,6 +17,7 @@ from ..frame import infer_scheme
 from ..heterograph import DGLGraph
 from ..ndarray import exist_shared_mem_array
 from ..transforms import compact_graphs
+from ..stats_collect import PrintLogStatsCollect
 from . import graph_services, role, rpc
 from .dist_tensor import DistTensor
 from .graph_partition_book import (
@@ -48,6 +49,7 @@ from .shared_mem_utils import (
     _to_shared_mem,
     DTYPE_DICT,
 )
+import time
 
 INIT_GRAPH = 800001
 
@@ -614,6 +616,11 @@ class DistGraph:
         self._etype_map = {
             etype: i for i, etype in enumerate(self.canonical_etypes)
         }
+        self.out_degrees_collector = PrintLogStatsCollect('dist_out_degrees')
+        self.in_degrees_collector = PrintLogStatsCollect('dist_in_degrees')
+        self.find_edges_collector = PrintLogStatsCollect('dist_find_edges')
+        self.barrier_collector = PrintLogStatsCollect('dist_barrier')
+        self.sample_neighbors_collector = PrintLogStatsCollect('dist_sample_neighbors')
 
     def _init(self, gpb):
         self._client = get_kvstore()
@@ -1080,7 +1087,11 @@ class DistGraph:
         """
         if is_all(u):
             u = F.arange(0, self.num_nodes())
-        return dist_out_degrees(self, u)
+        s = time.perf_counter_ns()
+        ret = dist_out_degrees(self, u)
+        elapsed = time.perf_counter_ns() - s
+        self.out_degrees_collector.add(elapsed)
+        return ret
 
     def in_degrees(self, v=ALL):
         """Return the in-degree(s) of the given nodes.
@@ -1129,7 +1140,11 @@ class DistGraph:
         """
         if is_all(v):
             v = F.arange(0, self.num_nodes())
-        return dist_in_degrees(self, v)
+        s = time.perf_counter_ns()
+        ret = dist_in_degrees(self, v)
+        elapsed = time.perf_counter_ns() - s
+        self.in_degrees_collector.add(elapsed)
+        return ret
 
     def node_attr_schemes(self):
         """Return the node feature schemes.
@@ -1225,6 +1240,7 @@ class DistGraph:
         tensor
             The destination node ID array.
         """
+        s = time.perf_counter_ns()
         if etype is None:
             assert (
                 len(self.etypes) == 1
@@ -1237,6 +1253,8 @@ class DistGraph:
         if len(gpb.ntypes) > 1:
             _, src = gpb.map_to_per_ntype(src)
             _, dst = gpb.map_to_per_ntype(dst)
+        elapsed = time.perf_counter_ns() - s
+        self.find_edges_collector.add(elapsed)
         return src, dst
 
     def edge_subgraph(self, edges, relabel_nodes=True, store_ids=True):
@@ -1355,7 +1373,10 @@ class DistGraph:
         This API blocks the current process untill all the clients invoke this API.
         Please use this API with caution.
         """
+        s = time.perf_counter_ns()
         self._client.barrier()
+        elapsed = time.perf_counter_ns() - s
+        self.barrier_collector.add(elapsed)
 
     def sample_neighbors(
         self,
@@ -1370,6 +1391,7 @@ class DistGraph:
     ):
         # pylint: disable=unused-argument
         """Sample neighbors from a distributed graph."""
+        s = time.perf_counter_ns()
         if len(self.etypes) > 1:
             frontier = graph_services.sample_etype_neighbors(
                 self,
@@ -1383,6 +1405,8 @@ class DistGraph:
             frontier = graph_services.sample_neighbors(
                 self, seed_nodes, fanout, replace=replace, prob=prob
             )
+        elapsed = time.perf_counter_ns() - s
+        self.sample_neighbors_collector.add(elapsed)
         return frontier
 
     def _get_ndata_names(self, ntype=None):
