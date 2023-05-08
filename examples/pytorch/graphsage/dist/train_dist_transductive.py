@@ -173,7 +173,7 @@ def run(args, device, data):
     iter_tput = []
     epoch = 0
     for epoch in range(args.num_epochs):
-        tic = time.time()
+        tic = time.perf_counter()
 
         sample_time = 0
         forward_time = 0
@@ -181,36 +181,36 @@ def run(args, device, data):
         update_time = 0
         num_seeds = 0
         num_inputs = 0
-        start = time.time()
+        start = time.perf_counter()
         with model.join():
             # Loop over the dataloader to sample the computation dependency
             # graph as a list of blocks.
             step_time = []
             for step, (input_nodes, seeds, blocks) in enumerate(dataloader):
-                tic_step = time.time()
+                tic_step = time.perf_counter()
                 sample_time += tic_step - start
                 num_seeds += len(blocks[-1].dstdata[dgl.NID])
                 num_inputs += len(blocks[0].srcdata[dgl.NID])
                 blocks = [block.to(device) for block in blocks]
                 batch_labels = g.ndata["labels"][seeds].long().to(device)
                 # Compute loss and prediction
-                start = time.time()
+                start = time.perf_counter()
                 batch_inputs = emb_layer(input_nodes)
                 batch_pred = model(blocks, batch_inputs)
                 loss = loss_fcn(batch_pred, batch_labels)
-                forward_end = time.time()
+                forward_end = time.perf_counter()
                 emb_optimizer.zero_grad()
                 optimizer.zero_grad()
                 loss.backward()
-                compute_end = time.time()
+                compute_end = time.perf_counter()
                 forward_time += forward_end - start
                 backward_time += compute_end - forward_end
 
                 emb_optimizer.step()
                 optimizer.step()
-                update_time += time.time() - compute_end
+                update_time += time.perf_counter() - compute_end
 
-                step_t = time.time() - tic_step
+                step_t = time.perf_counter() - tic_step
                 step_time.append(step_t)
                 iter_tput.append(len(blocks[-1].dstdata[dgl.NID]) / step_t)
                 if step % args.log_every == 0:
@@ -234,9 +234,9 @@ def run(args, device, data):
                             np.sum(step_time[-args.log_every:]),
                         )
                     )
-                start = time.time()
+                start = time.perf_counter()
 
-        toc = time.time()
+        toc = time.perf_counter()
         print(
             "Part {}, Epoch Time(s): {:.4f}, sample+data_copy: {:.4f}, forward"
             ": {:.4f}, backward: {:.4f}, update: {:.4f}, #seeds: {}, #inputs"
@@ -254,7 +254,7 @@ def run(args, device, data):
         epoch += 1
 
         if epoch % args.eval_every == 0 and epoch != 0:
-            start = time.time()
+            start = time.perf_counter()
             val_acc, test_acc = evaluate(
                 args.standalone,
                 model,
@@ -269,7 +269,7 @@ def run(args, device, data):
             print(
                 "Part {}, Val Acc {:.4f}, Test Acc {:.4f}, time: {:.4f}".format
                 (
-                    g.rank(), val_acc, test_acc, time.time() - start
+                    g.rank(), val_acc, test_acc, time.perf_counter() - start
                 )
             )
 

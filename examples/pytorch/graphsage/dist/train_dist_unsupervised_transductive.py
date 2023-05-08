@@ -121,43 +121,43 @@ def run(args, device, data):
         update_t = []
         iter_tput = []
 
-        start = time.time()
+        start = time.perf_counter()
         with model.join():
             # Loop over the dataloader to sample the computation dependency
             # graph as a list of blocks.
             for step, (input_nodes, pos_graph, neg_graph, blocks) in enumerate(
                 dataloader
             ):
-                tic_step = time.time()
+                tic_step = time.perf_counter()
                 sample_t.append(tic_step - start)
 
-                copy_t = time.time()
+                copy_t = time.perf_counter()
                 pos_graph = pos_graph.to(device)
                 neg_graph = neg_graph.to(device)
                 blocks = [block.to(device) for block in blocks]
                 feat_copy_t.append(copy_t - tic_step)
-                copy_time = time.time()
+                copy_time = time.perf_counter()
 
                 # Compute loss and prediction
                 batch_inputs = emb_layer(input_nodes)
                 batch_pred = model(blocks, batch_inputs)
                 loss = loss_fcn(batch_pred, pos_graph, neg_graph)
-                forward_end = time.time()
+                forward_end = time.perf_counter()
                 emb_optimizer.zero_grad()
                 optimizer.zero_grad()
                 loss.backward()
-                compute_end = time.time()
+                compute_end = time.perf_counter()
                 forward_t.append(forward_end - copy_time)
                 backward_t.append(compute_end - forward_end)
 
                 # Aggregate gradients in multiple nodes.
                 emb_optimizer.step()
                 optimizer.step()
-                update_t.append(time.time() - compute_end)
+                update_t.append(time.perf_counter() - compute_end)
 
                 pos_edges = pos_graph.num_edges()
 
-                step_t = time.time() - start
+                step_t = time.perf_counter() - start
                 step_time.append(step_t)
                 iter_tput.append(pos_edges / step_t)
                 num_seeds += pos_edges
@@ -181,7 +181,7 @@ def run(args, device, data):
                         )
                     )
 
-                start = time.time()
+                start = time.perf_counter()
 
         print(
             "[{}]Epoch Time(s): {:.4f}, sample: {:.4f}, data copy: {:.4f}, "

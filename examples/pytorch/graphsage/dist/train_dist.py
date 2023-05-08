@@ -155,11 +155,10 @@ def run(args, device, data):
     if args.membind != -1:
         memory.set_membind_nodes(args.membind)
         print(f"mem node bind : {args.membind}")
-    if args.interleave != "":
-        if args.interleave == "all":
+    if args.interleave != "" and args.interleave == "all":
             # assume two numa nodes
             memory.set_interleave_nodes(0, 1)
-            print(f"interleave between 0 and 1")
+            print("interleave between 0 and 1")
     print(f"current env: {os.environ}")
     # Unpack data
     train_nid, val_nid, test_nid, in_feats, n_classes, g = data
@@ -201,6 +200,12 @@ def run(args, device, data):
     # Training loop
     iter_tput = []
     epoch = 0
+
+    tot_sample_time = 0
+    tot_forward_time = 0
+    tot_backward_time = 0
+    tot_update_time = 0
+    tot_load_time = 0
     for epoch in range(args.num_epochs):
         tic = time.perf_counter()
 
@@ -218,7 +223,10 @@ def run(args, device, data):
         with model.join():
             for step, (input_nodes, seeds, blocks) in enumerate(dataloader):
                 tic_step = time.perf_counter()
-                sample_time += tic_step - start
+                sample_elapse = tic_step - start
+                sample_time += sample_elapse
+                tot_sample_time += sample_elapse
+
                 # fetch features/labels
                 batch_inputs, batch_labels = load_subtensor(
                     g, seeds, input_nodes, "cpu"
@@ -238,11 +246,20 @@ def run(args, device, data):
                 optimizer.zero_grad()
                 loss.backward()
                 compute_end = time.perf_counter()
-                forward_time += forward_end - start
-                backward_time += compute_end - forward_end
+
+                load_elapse = start - tic_step
+                forward_elapsed = forward_end - start
+                backward_elapsed = compute_end - forward_end
+                forward_time += forward_elapsed
+                backward_time += backward_elapsed
+                tot_forward_time += forward_elapsed
+                tot_backward_time += backward_elapsed
+                tot_load_time += load_elapse
 
                 optimizer.step()
-                update_time += time.perf_counter() - compute_end
+                update_elapsed = time.perf_counter() - compute_end
+                update_time += update_elapsed
+                tot_update_time += update_elapsed
 
                 step_t = time.perf_counter() - tic_step
                 step_time.append(step_t)
@@ -307,6 +324,11 @@ def run(args, device, data):
             )
     train_elpased = time.perf_counter() - start_train
     print(f"Training took {train_elpased} s")
+    print(f"Total sample time: {tot_sample_time} s, "
+          f"total forward time: {tot_forward_time} s, " 
+          f"total backward time: {tot_backward_time} s, "
+          f"total update time: {tot_update_time} s, "
+          f"total load time: {tot_load_time} s")
 
 
 def main(args):
