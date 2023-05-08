@@ -8,9 +8,9 @@ import torch as th
 from ogb.nodeproppred import DglNodePropPredDataset
 
 
-def load_ogb(dataset):
+def load_ogb(dataset, dataset_path):
     if dataset == "ogbn-mag":
-        dataset = DglNodePropPredDataset(name=dataset)
+        dataset = DglNodePropPredDataset(name=dataset, root=dataset_path)
         split_idx = dataset.get_idx_split()
         train_idx = split_idx["train"]["paper"]
         val_idx = split_idx["valid"]["paper"]
@@ -60,6 +60,9 @@ def load_ogb(dataset):
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser("Partition builtin graphs")
     argparser.add_argument(
+        "--dataset_path", type=str, default="~/.dgl", help="dataset path: ~/.dgl"
+    )
+    argparser.add_argument(
         "--dataset", type=str, default="ogbn-mag", help="datasets: ogbn-mag"
     )
     argparser.add_argument(
@@ -99,7 +102,7 @@ if __name__ == "__main__":
     args = argparser.parse_args()
 
     start = time.time()
-    g = load_ogb(args.dataset)
+    g = load_ogb(args.dataset, args.dataset_path)
 
     print(
         "load {} takes {:.3f} seconds".format(args.dataset, time.time() - start)
