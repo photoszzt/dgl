@@ -12,6 +12,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=str, default="data")
     args = parser.parse_args()
+    os.makedirs(args.output, exist_ok=True)
     # Load OGB-MAG.
     dataset = DglNodePropPredDataset(name="ogbn-mag")
     hg_orig, labels = dataset[0]
@@ -90,7 +91,7 @@ def main():
         1,
     )
     np.savetxt(
-        "mag_removed_edges.txt", removed_edge_data.numpy(), fmt="%d", delimiter=" "
+        os.path.join(args.output, "mag_removed_edges.txt"), removed_edge_data.numpy(), fmt="%d", delimiter=" "
     )
     print(
         "There are {} edges, remove {} self-loops and {} duplicated edges".format(
