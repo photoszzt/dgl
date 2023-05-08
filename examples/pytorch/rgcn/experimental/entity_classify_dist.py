@@ -579,8 +579,14 @@ def run(args, device, data):
 
     # training loop
     print("start training...")
+    start_train = time.perf_counter()
+    tot_sample_time = 0
+    tot_copy_time = 0
+    tot_backward_time = 0
+    tot_forward_time = 0
+    tot_update_time = 0
     for epoch in range(args.n_epochs):
-        tic = time.time()
+        tic = time.perf_counter()
 
         sample_time = 0
         copy_time = 0
@@ -599,7 +605,7 @@ def run(args, device, data):
         update_t = []
         iter_tput = []
 
-        start = time.time()
+        start = time.perf_counter()
         # Loop over the dataloader to sample the computation dependency graph as a list of
         # blocks.
         step_time = []
@@ -610,37 +616,49 @@ def run(args, device, data):
             number_input += np.sum(
                 [blocks[0].num_src_nodes(ntype) for ntype in blocks[0].ntypes]
             )
-            tic_step = time.time()
-            sample_time += tic_step - start
-            sample_t.append(tic_step - start)
+            tic_step = time.perf_counter()
+            sample_elapsed = tic_step - start 
+            sample_time += sample_elapsed
+            sample_t.append(sample_elapsed)
+            tot_sample_time += sample_elapsed
 
             feats = embed_layer(input_nodes)
             label = labels[seeds].to(device)
-            copy_time = time.time()
-            feat_copy_t.append(copy_time - tic_step)
+            copy_end = time.perf_counter() 
+            copy_elapsed = copy_end - tic_step
+            copy_time += copy_elapsed
+            feat_copy_t.append(copy_elapsed)
 
             # forward
             logits = model(blocks, feats)
             assert len(logits) == 1
             logits = logits["paper"]
             loss = F.cross_entropy(logits, label)
-            forward_end = time.time()
+            forward_end = time.perf_counter()
 
             # backward
             optimizer.zero_grad()
             if args.sparse_embedding:
                 emb_optimizer.zero_grad()
             loss.backward()
-            compute_end = time.time()
-            forward_t.append(forward_end - copy_time)
-            backward_t.append(compute_end - forward_end)
+            compute_end = time.perf_counter()
+
+            forward_elapsed = forward_end - copy_end
+            tot_forward_time += forward_elapsed
+            backward_elapsed = compute_end - forward_end
+            tot_backward_time += backward_elapsed
+            forward_t.append(forward_elapsed)
+            backward_t.append(backward_elapsed)
 
             # Update model parameters
             optimizer.step()
             if args.sparse_embedding:
                 emb_optimizer.step()
-            update_t.append(time.time() - compute_end)
-            step_t = time.time() - start
+            update_end = time.perf_counter()
+            update_elapsed = update_end - compute_end
+            tot_update_time += update_elapsed
+            update_t.append(update_elapsed)
+            step_t = time.perf_counter() - start
             step_time.append(step_t)
 
             train_acc = th.sum(logits.argmax(dim=1) == label).item() / len(
@@ -664,8 +682,9 @@ def run(args, device, data):
                         np.sum(update_t[-args.log_every :]),
                     )
                 )
-            start = time.time()
+            start = time.perf_counter()
 
+        toc = time.perf_counter()
         gc.collect()
         print(
             "[{}]Epoch Time(s): {:.4f}, sample: {:.4f}, data copy: {:.4f}, forward: {:.4f}, backward: {:.4f}, update: {:.4f}, #train: {}, #input: {}".format(
@@ -682,7 +701,7 @@ def run(args, device, data):
         )
         epoch += 1
 
-        start = time.time()
+        start = time.perf_counter()
         g.barrier()
         val_acc, test_acc = evaluate(
             g,
@@ -697,9 +716,16 @@ def run(args, device, data):
         if val_acc >= 0:
             print(
                 "Val Acc {:.4f}, Test Acc {:.4f}, time: {:.4f}".format(
-                    val_acc, test_acc, time.time() - start
+                    val_acc, test_acc, time.perf_counter() - start
                 )
             )
+    train_elapsed = time.perf_counter() - start_train
+    print("Train total time(s): {:.4f}".format(train_elapsed))
+    print(f"Total sample time: {tot_sample_time} s, "
+          f"total forward time: {tot_forward_time} s, " 
+          f"total backward time: {tot_backward_time} s, "
+          f"total update time: {tot_update_time} s, "
+          f"total load time: {tot_copy_time} s")
 
 
 def main(args):
