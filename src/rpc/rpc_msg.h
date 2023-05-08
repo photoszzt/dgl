@@ -64,6 +64,20 @@ struct RPCMessage : public runtime::Object {
     stream->Write(group_id);
   }
 
+  size_t GetRPCMsgSize() const {
+    size_t size = 0;
+    size += sizeof(service_id);
+    size += sizeof(msg_seq);
+    size += sizeof(client_id);
+    size += sizeof(server_id);
+    size += sizeof(group_id);
+    size += data.size();
+    for (const auto& tensor : tensors) {
+      size += tensor.GetSize();
+    }
+    return size;
+  }
+
   static constexpr const char* _type_key = "rpc.RPCMessage";
   DGL_DECLARE_OBJECT_TYPE_INFO(RPCMessage, runtime::Object);
 };
