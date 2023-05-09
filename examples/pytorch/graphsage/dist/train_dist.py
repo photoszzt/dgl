@@ -205,11 +205,12 @@ def run(args, device, data):
     tot_forward_time = 0
     tot_backward_time = 0
     tot_update_time = 0
-    tot_load_time = 0
+    tot_copy_time = 0
     for epoch in range(args.num_epochs):
         tic = time.perf_counter()
 
         sample_time = 0
+        copy_time = 0
         forward_time = 0
         backward_time = 0
         update_time = 0
@@ -254,7 +255,8 @@ def run(args, device, data):
                 backward_time += backward_elapsed
                 tot_forward_time += forward_elapsed
                 tot_backward_time += backward_elapsed
-                tot_load_time += load_elapse
+                tot_copy_time += load_elapse
+                copy_time += load_elapse
 
                 optimizer.step()
                 update_elapsed = time.perf_counter() - compute_end
@@ -289,12 +291,13 @@ def run(args, device, data):
 
         toc = time.perf_counter()
         print(
-            "Part {}, Epoch Time(s): {:.4f}, sample+data_copy: {:.4f}, "
+            "Part {}, Epoch Time(s): {:.4f}, sample: {:.4f}, data_copy: {:.4f}"
             "forward: {:.4f}, backward: {:.4f}, update: {:.4f}, #seeds: {}, "
             "#inputs: {}".format(
                 g.rank(),
                 toc - tic,
                 sample_time,
+                copy_time,
                 forward_time,
                 backward_time,
                 update_time,
