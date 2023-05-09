@@ -11,6 +11,7 @@
 #include <time.h>
 
 #include <memory>
+#include <chrono>
 
 #include "../../c_api_common.h"
 #include "socket_pool.h"
@@ -161,6 +162,7 @@ void SocketSender::Finalize() {
 void SendCore(Message msg, TCPSocket* socket) {
   // First send the size
   // If exit == true, we will send zero size to reciever
+  auto startTime = std::chrono::steady_clock::now();
   int64_t sent_bytes = 0;
   while (static_cast<size_t>(sent_bytes) < sizeof(int64_t)) {
     int64_t max_len = sizeof(int64_t) - sent_bytes;
@@ -177,10 +179,14 @@ void SendCore(Message msg, TCPSocket* socket) {
     CHECK_NE(tmp, -1);
     sent_bytes += tmp;
   }
+  int64_t total_size = sizeof(int64_t) + msg.size;
+  std::chrono::duration<double, std::milli> elapsedTime = std::chrono::steady_clock::now() - startTime;
+  printf("SendRPCMsg: %f ms, %ld B\n", elapsedTime.count(), total_size);
   // delete msg
   if (msg.deallocator != nullptr) {
     msg.deallocator(&msg);
-  }
+  }    
+
 }
 
 void SocketSender::SendLoop(
