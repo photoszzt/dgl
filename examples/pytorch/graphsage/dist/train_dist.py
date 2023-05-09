@@ -331,7 +331,7 @@ def run(args, device, data):
           f"total forward time: {tot_forward_time} s, " 
           f"total backward time: {tot_backward_time} s, "
           f"total update time: {tot_update_time} s, "
-          f"total load time: {tot_load_time} s")
+          f"total load time: {tot_copy_time} s")
 
 
 def main(args):
