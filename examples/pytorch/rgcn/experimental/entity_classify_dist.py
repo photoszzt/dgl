@@ -626,7 +626,7 @@ def run(args, device, data):
             label = labels[seeds].to(device)
             copy_end = time.perf_counter() 
             copy_elapsed = copy_end - tic_step
-            copy_time += copy_elapsed
+            tot_copy_time += copy_elapsed
             feat_copy_t.append(copy_elapsed)
 
             # forward
