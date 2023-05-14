@@ -585,6 +585,7 @@ def run(args, device, data):
     tot_backward_time = 0
     tot_forward_time = 0
     tot_update_time = 0
+    tot_eval_time = 0
     for epoch in range(args.n_epochs):
         tic = time.perf_counter()
 
@@ -701,31 +702,35 @@ def run(args, device, data):
         )
         epoch += 1
 
-        start = time.perf_counter()
-        g.barrier()
-        val_acc, test_acc = evaluate(
-            g,
-            model,
-            embed_layer,
-            labels,
-            valid_dataloader,
-            test_dataloader,
-            all_val_nid,
-            all_test_nid,
-        )
-        if val_acc >= 0:
-            print(
-                "Val Acc {:.4f}, Test Acc {:.4f}, time: {:.4f}".format(
-                    val_acc, test_acc, time.perf_counter() - start
-                )
+        if args.eval_while_train:
+            start = time.perf_counter()
+            g.barrier()
+            val_acc, test_acc = evaluate(
+                g,
+                model,
+                embed_layer,
+                labels,
+                valid_dataloader,
+                test_dataloader,
+                all_val_nid,
+                all_test_nid,
             )
+            eval_time = time.perf_counter() - start
+            tot_eval_time += eval_time
+            if val_acc >= 0:
+                print(
+                    "Val Acc {:.4f}, Test Acc {:.4f}, time: {:.4f}".format(
+                        val_acc, test_acc, eval_time,
+                    )
+                )
     train_elapsed = time.perf_counter() - start_train
     print("Train total time(s): {:.4f}".format(train_elapsed))
     print(f"Total sample time: {tot_sample_time} s, "
           f"total forward time: {tot_forward_time} s, " 
           f"total backward time: {tot_backward_time} s, "
           f"total update time: {tot_update_time} s, "
-          f"total load time: {tot_copy_time} s")
+          f"total load time: {tot_copy_time} s, "
+          f"total eval time: {tot_eval_time} s")
 
 
 def main(args):
@@ -932,6 +937,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--standalone", action="store_true", help="run in the standalone mode"
+    )
+    parser.add_argument(
+        "--eval_while_train", action="store_true", help="whether evalute the accuracy during training",
     )
     args = parser.parse_args()
 

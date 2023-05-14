@@ -308,7 +308,7 @@ def run(args, device, data):
         )
         epoch += 1
 
-        if epoch % args.eval_every == 0 and epoch != 0:
+        if epoch % args.eval_every == 0 and epoch != 0 and args.eval_while_train:
             start = time.perf_counter()
             val_acc, test_acc = evaluate(
                 model if args.standalone else model.module,
@@ -473,6 +473,9 @@ if __name__ == "__main__":
         type=str,
         default="socket",
         help="backend net type, 'socket' or 'tensorpipe'",
+    )
+    parser.add_argument(
+        "--eval_while_train", action="store_true", help="whether evalute the accuracy during training",
     )
     args = parser.parse_args()
 
