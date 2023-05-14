@@ -206,6 +206,7 @@ def run(args, device, data):
     tot_backward_time = 0
     tot_update_time = 0
     tot_copy_time = 0
+    tot_eval_time = 0
     for epoch in range(args.num_epochs):
         tic = time.perf_counter()
 
@@ -319,19 +320,22 @@ def run(args, device, data):
                 args.batch_size_eval,
                 device,
             )
+            eval_time = time.perf_counter() - start
             print(
                 "Part {}, Val Acc {:.4f}, Test Acc {:.4f}, time: {:.4f}".format
                 (
-                    g.rank(), val_acc, test_acc, time.perf_counter() - start
+                    g.rank(), val_acc, test_acc, eval_time
                 )
             )
+            tot_eval_time += eval_time
     train_elpased = time.perf_counter() - start_train
     print(f"Training took {train_elpased} s")
     print(f"Total sample time: {tot_sample_time} s, "
           f"total forward time: {tot_forward_time} s, " 
           f"total backward time: {tot_backward_time} s, "
           f"total update time: {tot_update_time} s, "
-          f"total load time: {tot_copy_time} s")
+          f"total load time: {tot_copy_time} s, "
+          f"total eval time: {tot_eval_time} s")
 
 
 def main(args):
