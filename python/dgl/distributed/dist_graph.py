@@ -553,6 +553,12 @@ class DistGraph:
     set of machines. If users need to run them on different sets of machines, it requires
     manually setting up servers and trainers. The setup is not fully tested yet.
     """
+    out_degrees_collector = PrintLogStatsCollect('dist_out_degrees')
+    in_degrees_collector = PrintLogStatsCollect('dist_in_degrees')
+    find_edges_collector = PrintLogStatsCollect('dist_find_edges')
+    barrier_collector = PrintLogStatsCollect('dist_barrier')
+    sample_neighbors_collector = PrintLogStatsCollect('dist_sample_neighbors')
+
 
     def __init__(self, graph_name, gpb=None, part_config=None):
         self.graph_name = graph_name
